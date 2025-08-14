@@ -13,3 +13,4 @@ uvicorn[standard]
 pydantic-settings>=1.2.0
 python-multipart>=0.0.6
 openpyxl
+sklearn
