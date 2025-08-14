@@ -4,6 +4,7 @@ from nip_query.sql_validator_helper import validate_sql
 from query_processor import execute_query
 from nip_query.result_formatter import summarize_dataframe, generate_chart, export_dataframe
 from query_processor import execute_query
+from nip_query import nl_to_sql
 
 
 
@@ -47,3 +48,9 @@ if __name__ == "__main__":
     print("Summary:\n", output["summary"])
     print("DataFrame:\n", output["dataframe"].head())
   
+
+def run_query(user_query: str):
+    sql, params = nl_to_sql.translate_nl_to_sql(user_query)
+    # execute the SQL via your processor
+    return execute_query(sql)
+    
