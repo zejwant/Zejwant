@@ -1,113 +1,50 @@
 # main.py
-from fastapi import FastAPI, File, UploadFile
 from pydantic import BaseModel
 from orchestrator import run_query
 import pandas as pd
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float
 
 
-# SQLite engine
-engine = create_engine("sqlite:///mydb.db")
-metadata = MetaData()
 
+from fastapi import FastAPI, UploadFile, File
+from cleaning.cleaner_controller import CleanerController
+from ingestion.upload_pipeline import upload_file
+from storage.sql_manager import SQLManager
+from nip_query.nl_to_sql import NLtoSQL
+from fastapi.responses import JSONResponse
 
+app = FastAPI(title="Data Platform Test API")
 
-app = FastAPI(title="Enterprise Data Platform")
+@app.post("/upload/")
+async def upload(file: UploadFile = File(...)):
+    # Step 1: Save raw file temporarily
+    content = await file.read()
+    temp_path = f"temp_uploads/{file.filename}"
+    with open(temp_path, "wb") as f:
+        f.write(content)
 
-@app.get("/")
-def read_root():
-    return {"message": "Platform ready"}
+    # Step 2: Ingest raw file
+    data = upload_file(temp_path)  # calls the appropriate connector
 
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    table_name, row_count = process_file(file)
-    return {"filename": file.filename, "rows": row_count, "table": table_name}
+    # Step 3: Clean data
+    cleaner = CleanerController()
+    cleaned_data = cleaner.clean(data, file.filename)
 
-@app.post("/query")
-def execute_query(query: str):
-    return run_query(query)
+    # Step 4: Store in SQL
+    sql_manager = SQLManager()
+    table_name = sql_manager.save_dataframe(cleaned_data, file.filename)
+
+    return {"status": "success", "table": table_name}
     
 
-
-
-
-
-
-
-# ----- Cleaning functions -----
-def clean_remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
-    return df.drop_duplicates()
-
-def clean_strip_whitespace(df: pd.DataFrame) -> pd.DataFrame:
-    return df.applymap(lambda x: x.strip() if isinstance(x, str) else x)
-
-def clean_fill_missing(df: pd.DataFrame) -> pd.DataFrame:
-    for col in df.columns:
-        if df[col].dtype == 'object':
-            df[col].fillna("N/A", inplace=True)
-        else:
-            df[col].fillna(0, inplace=True)
-    return df
-
-CLEANING_METHODS = [
-    clean_remove_duplicates,
-    clean_strip_whitespace,
-    clean_fill_missing
-]
-
-
-# ----- Utility to detect file type -----
-def read_file(file: UploadFile) -> pd.DataFrame:
-    if file.filename.endswith(".csv"):
-        return pd.read_csv(file.file)
-    elif file.filename.endswith((".xls", ".xlsx")):
-        return pd.read_excel(file.file)
-    else:
-        raise ValueError(f"Unsupported file type: {file.filename}")
-
-
-# ----- Store DataFrame dynamically in SQL -----
-def store_data(df: pd.DataFrame, table_name: str):
-    df.to_sql(table_name, engine, index=False, if_exists='replace')
-    return f"Stored {len(df)} rows in table '{table_name}'"
-
-
-# ----- FastAPI Endpoints -----
-@app.get("/")
-def read_root():
-    return {"message": "Hello World"}
-
-
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    try:
-        # 1. Read file
-        df = read_file(file)
-        
-        # 2. Apply cleaning methods
-        for func in CLEANING_METHODS:
-            df = func(df)
-        
-        # 3. Store in SQL
-        table_name = file.filename.replace(".", "_")
-        status = store_data(df, table_name)
-        
-        return {
-            "filename": file.filename,
-            "rows": len(df),
-            "columns": list(df.columns),
-            "table_stored": table_name,
-            "status": status
-        }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-class QueryRequest(BaseModel):
-    query: str
-
-
-@app.post("/query")
-def execute(request: QueryRequest):
-    return run_query(request.query)
+@app.post("/query/")
+async def query_nl(question: str):
+    nl_engine = NLtoSQL()
+    sql_query = nl_engine.translate(question)
     
+    sql_manager = SQLManager()
+    results = sql_manager.execute_query(sql_query)
+    
+    return JSONResponse(content={"question": question, "sql": sql_query, "results": results})
+    
+
