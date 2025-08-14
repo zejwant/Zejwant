@@ -127,4 +127,14 @@ if __name__ == "__main__":
         print("Unsafe SQL test:", validate_sql(unsafe_sql))
     except Exception as e:
         print("Unsafe SQL failed as expected:", e)
-      
+
+# nip_query/sql_validator_helper.py
+
+def validate_sql(sql: str) -> bool:
+    """
+    Very basic SQL validation.
+    Returns True if the query starts with SELECT, INSERT, UPDATE, or DELETE.
+    """
+    sql = sql.strip().lower()
+    return sql.startswith(("select", "insert", "update", "delete"))
+    
