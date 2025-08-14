@@ -1,5 +1,6 @@
 from nip_query import nl_to_sql
 from config import get_settings
+from nip_query.query_router import decide_route
 from nip_query.sql_validator_helper import validate_sql
 from query_processor import execute_query
 from nip_query.result_formatter import summarize_dataframe, generate_chart, export_dataframe
