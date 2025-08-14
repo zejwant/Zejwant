@@ -219,3 +219,10 @@ class Deduplicator:
         logger.info(f"Deduplicated across {len(dfs)} sources, removed {result['removed']} duplicates in {time.time()-start:.2f}s")
         return result
             
+
+
+
+   def deduplicate_data(df: pd.DataFrame, subset: list = None) -> pd.DataFrame:
+    from .deduplication import Deduplicator
+    return Deduplicator.deduplicate(df, subset=subset)
+       
