@@ -220,9 +220,10 @@ class Deduplicator:
         return result
             
 
+def deduplicate_data(df: pd.DataFrame, subset: list = None) -> pd.DataFrame:
+    """
+    Remove duplicates from a DataFrame.
+    """
+    return df.drop_duplicates(subset=subset)
 
 
-   def deduplicate_data(df: pd.DataFrame, subset: list = None) -> pd.DataFrame:
-    from .deduplication import Deduplicator
-    return Deduplicator.deduplicate(df, subset=subset)
-       
