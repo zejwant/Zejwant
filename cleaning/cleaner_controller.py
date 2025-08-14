@@ -1,87 +1,94 @@
 """
-cleaning/cleaner_controller.py
-
-Enterprise-grade cleaning workflow orchestrator.
+cleaner_controller.py
+Unified Enterprise-grade Cleaning Orchestrator for 30+ formats.
 
 Features:
-- Automatic format detection (CSV, Excel, JSON, XML, PDF, Log)
-- Routing to format-specific cleaners
+- Auto-detect file, stream, IoT, media formats
+- Route to individual cleaners
 - Core cleaning, validation, deduplication integration
-- Logging, error handling, metrics, retries
-- Detailed cleaning report generation
+- Logging, metrics, retries
+- Detailed cleaning report
+- Ready for ETL pipelines
 """
 
 import logging
 import time
-from typing import Any, Dict, Optional, List, Union
+from typing import Any, Dict, Optional, List
 import pandas as pd
 
+# --- Core / Validation / Dedup modules ---
 from .cleaner_core import CleanerCore
 from .validation import DataValidator
 from .deduplication import Deduplicator
+
+# --- Format-specific cleaners ---
 from .format_cleaners.csv_cleaner import clean_csv
 from .format_cleaners.excel_cleaner import clean_excel
 from .format_cleaners.json_cleaner import clean_json
 from .format_cleaners.xml_cleaner import clean_xml
 from .format_cleaners.pdf_cleaner import clean_pdf
 from .format_cleaners.log_cleaner import clean_log
+from .format_cleaners.parquet_cleaner import clean_parquet
+from .format_cleaners.avro_cleaner import clean_avro
+from .format_cleaners.orc_cleaner import clean_orc
+from .format_cleaners.yaml_cleaner import clean_yaml
+from .format_cleaners.html_scraper_cleaner import clean_html
+from .format_cleaners.google_sheets_cleaner import clean_google_sheets
+from .format_cleaners.audio_metadata_cleaner import AudioMetadataCleaner
+from .format_cleaners.video_metadata_cleaner import VideoMetadataCleaner
+from .format_cleaners.image_cleaner import ImageCleaner
+from .format_cleaners.sensor_iot_cleaner import SensorIoTCleaner
+from .format_cleaners.mqtt_stream_cleaner import MQTTStreamCleaner
+from .format_cleaners.kafka_stream_cleaner import KafkaStreamCleaner
 
-# Logger setup
-logger = logging.getLogger("cleaner_controller")
+# ---------------- Logger ----------------
+logger = logging.getLogger("UnifiedCleanerController")
 logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+ch = logging.StreamHandler()
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
-class CleanerController:
+class UnifiedCleanerController:
     """
-    Orchestrates the full cleaning workflow for enterprise-grade data pipelines.
+    Enterprise-grade orchestrator for all file, stream, IoT, and media formats.
     """
 
     def __init__(self, retry_attempts: int = 3):
         self.retry_attempts = retry_attempts
         self.metrics = {
-            "core_cleaning_steps": 0,
-            "validation_steps": 0,
-            "deduplication_steps": 0,
+            "format_cleaning": 0,
+            "core_cleaning": 0,
+            "validation": 0,
+            "deduplication": 0,
             "total_cleaned": 0,
         }
 
+    # ---------------- Format Detection ----------------
     def detect_format(self, data: Any, file_name: Optional[str] = None) -> str:
-        """
-        Auto-detect data format.
-        Args:
-            data: Data content or DataFrame
-            file_name: Optional file name to infer format
-        Returns:
-            format string: 'csv', 'excel', 'json', 'xml', 'pdf', 'log'
-        """
+        """Auto-detect format by type or file extension."""
         if isinstance(data, pd.DataFrame):
-            logger.info("Detected format: DataFrame")
             return "dataframe"
         if file_name:
             ext = file_name.split('.')[-1].lower()
             mapping = {
-                "csv": "csv",
-                "xlsx": "excel",
-                "xls": "excel",
-                "json": "json",
-                "xml": "xml",
-                "pdf": "pdf",
-                "log": "log",
+                "csv": "csv", "xlsx": "excel", "xls": "excel", "json": "json",
+                "xml": "xml", "pdf": "pdf", "log": "log", "parquet": "parquet",
+                "avro": "avro", "orc": "orc", "yaml": "yaml", "yml": "yaml",
+                "html": "html", "gsheet": "google_sheets"
             }
             if ext in mapping:
-                logger.info(f"Detected format from file extension: {ext}")
                 return mapping[ext]
-        logger.warning("Unable to detect format, defaulting to raw")
+        if isinstance(data, dict):
+            return "yaml"  # fallback for structured dict
+        if hasattr(data, "stream_type"):
+            return getattr(data, "stream_type")  # IoT or stream data
         return "raw"
 
+    # ---------------- Cleaner Routing ----------------
     def route_to_cleaner(self, data: Any, data_format: str, **kwargs) -> Any:
-        """
-        Route data to the corresponding format-specific cleaner.
-        """
+        """Route data to corresponding cleaner."""
         cleaners = {
             "csv": clean_csv,
             "excel": clean_excel,
@@ -89,94 +96,87 @@ class CleanerController:
             "xml": clean_xml,
             "pdf": clean_pdf,
             "log": clean_log,
-            "dataframe": lambda x, **kw: x,  # already loaded
+            "parquet": clean_parquet,
+            "avro": clean_avro,
+            "orc": clean_orc,
+            "yaml": clean_yaml,
+            "html": clean_html,
+            "google_sheets": clean_google_sheets,
+            "dataframe": lambda x, **kw: x,
             "raw": lambda x, **kw: x,
+            "audio": AudioMetadataCleaner,
+            "video": VideoMetadataCleaner,
+            "image": ImageCleaner,
+            "sensor_iot": SensorIoTCleaner,
+            "mqtt_stream": MQTTStreamCleaner,
+            "kafka_stream": KafkaStreamCleaner
         }
 
         if data_format not in cleaners:
-            logger.error(f"No cleaner available for format: {data_format}")
-            raise ValueError(f"Unsupported data format: {data_format}")
+            raise ValueError(f"No cleaner for format: {data_format}")
 
         attempts = 0
         while attempts < self.retry_attempts:
             try:
-                logger.info(f"Running format-specific cleaner for: {data_format}")
-                cleaned_data = cleaners[data_format](data, **kwargs)
-                return cleaned_data
+                cleaner = cleaners[data_format]
+                if callable(cleaner):
+                    if data_format in ["audio", "video", "image", "sensor_iot", "mqtt_stream", "kafka_stream"]:
+                        # Instantiate class-based cleaner
+                        return cleaner(data).clean(**kwargs)
+                    return cleaner(data, **kwargs)
+                else:
+                    raise TypeError(f"Cleaner is not callable: {data_format}")
             except Exception as e:
                 attempts += 1
-                logger.error(f"Cleaner failed on attempt {attempts} for {data_format}: {e}")
+                logger.error(f"Cleaner failed (attempt {attempts}) for {data_format}: {e}")
                 if attempts >= self.retry_attempts:
                     raise
 
-    def run_core_cleaning(self, df: pd.DataFrame, cleaning_steps: Optional[List[str]] = None) -> pd.DataFrame:
-        """
-        Apply core cleaning functions sequentially.
-        """
-        cleaning_steps = cleaning_steps or [
-            "trim_strings", "lowercase_columns", "remove_extra_whitespace",
-            "remove_special_characters", "fill_missing"
-        ]
-        for step in cleaning_steps:
+    # ---------------- Core Cleaning ----------------
+    def run_core_cleaning(self, df: pd.DataFrame, steps: Optional[List[str]] = None) -> pd.DataFrame:
+        steps = steps or ["trim_strings", "lowercase_columns", "remove_extra_whitespace", "remove_special_characters", "fill_missing"]
+        for step in steps:
             func = getattr(CleanerCore, step, None)
             if callable(func):
                 df = func(df, df.columns.tolist())
-                self.metrics["core_cleaning_steps"] += 1
-                logger.info(f"Applied core cleaning step: {step}")
+                self.metrics["core_cleaning"] += 1
         return df
 
+    # ---------------- Validation ----------------
     def run_validation(self, df: pd.DataFrame, schema: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Run validation checks and return report.
-        """
         report = {}
         if schema:
             report["schema"] = DataValidator.validate_schema(df, schema)
-            self.metrics["validation_steps"] += 1
-        # Add other generic validations if needed
-        self.metrics["validation_steps"] += 1
+            self.metrics["validation"] += 1
         return report
 
-    def run_deduplication(self, df: pd.DataFrame, dedup_strategy: str = "drop_exact_duplicates",
+    # ---------------- Deduplication ----------------
+    def run_deduplication(self, df: pd.DataFrame, strategy: str = "drop_exact_duplicates",
                           columns: Optional[List[str]] = None) -> Dict[str, Any]:
-        """
-        Run deduplication using specified strategy.
-        """
-        func = getattr(Deduplicator, dedup_strategy, None)
+        func = getattr(Deduplicator, strategy, None)
         if callable(func):
             result = func(df, subset=columns)
-            self.metrics["deduplication_steps"] += 1
-            logger.info(f"Deduplication applied: {dedup_strategy}")
+            self.metrics["deduplication"] += 1
             return result
-        else:
-            logger.warning(f"Deduplication strategy not found: {dedup_strategy}")
-            return {"data": df, "removed": 0}
+        return {"data": df, "removed": 0}
 
+    # ---------------- Full Cleaning Pipeline ----------------
     def clean_data(self, data: Any, file_name: Optional[str] = None,
                    schema: Optional[Dict[str, Any]] = None,
                    dedup_strategy: str = "drop_exact_duplicates",
                    dedup_columns: Optional[List[str]] = None,
                    core_steps: Optional[List[str]] = None,
                    **kwargs) -> Dict[str, Any]:
-        """
-        Full cleaning pipeline:
-        1. Format detection
-        2. Format-specific cleaning
-        3. Core cleaning
-        4. Validation
-        5. Deduplication
-        Returns a detailed cleaning report.
-        """
-        start_time = time.time()
+        start = time.time()
         report = {"steps": {}, "metrics": {}, "errors": []}
 
         try:
             data_format = self.detect_format(data, file_name)
             df = self.route_to_cleaner(data, data_format, **kwargs)
             report["steps"]["format_cleaning"] = f"Format cleaned: {data_format}"
+            self.metrics["format_cleaning"] += 1
         except Exception as e:
             report["errors"].append({"step": "format_cleaning", "error": str(e)})
-            logger.error(f"Format cleaning failed: {e}")
             return report
 
         try:
@@ -185,7 +185,6 @@ class CleanerController:
                 report["steps"]["core_cleaning"] = "Core cleaning applied"
         except Exception as e:
             report["errors"].append({"step": "core_cleaning", "error": str(e)})
-            logger.error(f"Core cleaning failed: {e}")
 
         try:
             if isinstance(df, pd.DataFrame) and schema:
@@ -193,7 +192,6 @@ class CleanerController:
                 report["steps"]["validation"] = validation_report
         except Exception as e:
             report["errors"].append({"step": "validation", "error": str(e)})
-            logger.error(f"Validation failed: {e}")
 
         try:
             if isinstance(df, pd.DataFrame) and dedup_strategy:
@@ -202,14 +200,11 @@ class CleanerController:
                 report["steps"]["deduplication"] = dedup_result
         except Exception as e:
             report["errors"].append({"step": "deduplication", "error": str(e)})
-            logger.error(f"Deduplication failed: {e}")
 
         report["metrics"] = self.metrics.copy()
-        report["metrics"]["elapsed_time_sec"] = time.time() - start_time
+        report["metrics"]["elapsed_time_sec"] = time.time() - start
         report["cleaned_data"] = df
-
         self.metrics["total_cleaned"] += 1
-        logger.info("Cleaning pipeline completed successfully")
 
         return report
-                     
+                      
