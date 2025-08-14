@@ -1,0 +1,10 @@
+pandas
+sqlalchemy
+psycopg2-binary
+sqlparse
+python-dotenv
+pydantic
+matplotlib
+plotly
+spacy
+transformers
