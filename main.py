@@ -13,38 +13,48 @@ from storage.sql_manager import SQLManager
 from nip_query.nl_to_sql import NLtoSQL
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="Data Platform Test API")
+from fastapi import FastAPI, File, UploadFile
+import pandas as pd
+from cleaning.validation import DataValidatorV1
+from storage.sql_manager import store_dataframe
 
-@app.post("/upload/")
-async def upload(file: UploadFile = File(...)):
-    # Step 1: Save raw file temporarily
-    content = await file.read()
-    temp_path = f"temp_uploads/{file.filename}"
-    with open(temp_path, "wb") as f:
-        f.write(content)
+app = FastAPI()
 
-    # Step 2: Ingest raw file
-    data = upload_file(temp_path)  # calls the appropriate connector
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    contents = await file.read()
+    filename = file.filename
 
-    # Step 3: Clean data
-    cleaner = CleanerController()
-    cleaned_data = cleaner.clean(data, file.filename)
+    # 1️⃣ Detect file type
+    if filename.endswith(".csv"):
+        df = pd.read_csv(pd.io.common.BytesIO(contents))
+    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+        df = pd.read_excel(pd.io.common.BytesIO(contents))
+    elif filename.endswith(".json"):
+        df = pd.read_json(pd.io.common.BytesIO(contents))
+    else:
+        return {"error": f"Unsupported file type: {filename}"}
 
-    # Step 4: Store in SQL
-    sql_manager = SQLManager()
-    table_name = sql_manager.save_dataframe(cleaned_data, file.filename)
+    # 2️⃣ Run validation
+    validator = DataValidatorV1()
+    schema = {
+        "id": {"type": "numeric", "min": 1},
+        "name": {"type": "string", "pattern": r"^[A-Za-z ]+$"}
+    }
+    validation_report = validator.batch_validate(df, schema)
 
-    return {"status": "success", "table": table_name}
+    # 3️⃣ Store in SQL
+    store_dataframe(df, table_name="uploaded_data")
+
+    # 4️⃣ Return feedback
+    return {
+        "filename": filename,
+        "rows_uploaded": len(df),
+        "validation_report": validation_report
+    }
     
 
-@app.post("/query/")
-async def query_nl(question: str):
-    nl_engine = NLtoSQL()
-    sql_query = nl_engine.translate(question)
-    
-    sql_manager = SQLManager()
-    results = sql_manager.execute_query(sql_query)
-    
-    return JSONResponse(content={"question": question, "sql": sql_query, "results": results})
-    
+
+
+
 
