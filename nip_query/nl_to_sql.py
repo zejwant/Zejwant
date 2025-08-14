@@ -22,9 +22,13 @@ from .llm_based import generate_sql    # OK if inside nip_query
 # OR use absolute from main code:
 from nip_query.llm_based import generate_sql
 from .query_router import decide_route
-from .rule_based import generate_sql as rule_based_sql
-from .llm_based import generate_sql as llm_based_sql
 from .sql_formatter import format_sql  # helper module to normalize formatting
+from nip_query.query_router import decide_route
+from nip_query.llm_based import generate_sql as llm_based_sql
+from nip_query.rule_based import generate_sql as rule_based_sql
+
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -134,3 +138,15 @@ def generate_sql(query: str) -> str:
     else:
         return "SELECT COUNT(*) FROM my_table"
         
+
+def translate_nl_to_sql(nl_query: str):
+    """
+    Convert natural language query to SQL using router.
+    """
+    route = decide_route(nl_query)  # 'rule' or 'llm'
+    if route == "rule":
+        return rule_based_sql(nl_query), {}
+    elif route == "llm":
+        return llm_based_sql(nl_query), {}
+    else:
+        raise ValueError(f"Unknown route: {route}")
