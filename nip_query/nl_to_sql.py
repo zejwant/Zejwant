@@ -21,11 +21,12 @@ from typing import Dict, Any, Tuple
 from .llm_based import generate_sql    # OK if inside nip_query
 # OR use absolute from main code:
 from nip_query.llm_based import generate_sql
-from .query_router import decide_route
-from .sql_formatter import format_sql  # helper module to normalize formatting
 from nip_query.query_router import decide_route
 from nip_query.llm_based import generate_sql as llm_based_sql
 from nip_query.rule_based import generate_sql as rule_based_sql
+from nip_query.result_formatter import format_sql
+from nip_query.query_router import decide_route
+from nip_query.sql_formatter import format_sql  # helper module to normalize formatting
 
 
 
