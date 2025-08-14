@@ -468,3 +468,56 @@ __all__ = [
     "LLMPlanResult",
   ]
   
+# nip_query/llm_based.py
+
+from typing import Optional
+import re
+
+def generate_sql(query: str, table_name: Optional[str] = "my_table") -> str:
+    """
+    LLM-based SQL generator (safe placeholder implementation).
+
+    Args:
+        query (str): Natural language query.
+        table_name (str, optional): Table name to query. Defaults to "my_table".
+
+    Returns:
+        str: Generated SQL query string.
+    
+    Logic:
+        - Extract simple SELECT fields using keywords (placeholder for LLM logic)
+        - Handles aggregate functions (COUNT, SUM, AVG)
+        - Escapes single quotes to prevent basic SQL injection
+        - Can be extended to integrate with real LLMs like OpenAI GPT
+    """
+    # Normalize query
+    q = query.lower().strip()
+    
+    # Escape single quotes
+    q_safe = q.replace("'", "''")
+    
+    # Basic keyword-based mapping
+    if any(word in q for word in ["count", "total number", "number of"]):
+        return f"SELECT COUNT(*) FROM {table_name}"
+    elif any(word in q for word in ["sum", "total"]):
+        # Try to extract column name after 'sum' (very naive)
+        match = re.search(r"sum of (\w+)", q)
+        column = match.group(1) if match else "*"
+        return f"SELECT SUM({column}) FROM {table_name}"
+    elif any(word in q for word in ["average", "avg"]):
+        match = re.search(r"(?:average|avg) of (\w+)", q)
+        column = match.group(1) if match else "*"
+        return f"SELECT AVG({column}) FROM {table_name}"
+    else:
+        # Default: simple SELECT all with a WHERE-like filter placeholder
+        return f"SELECT * FROM {table_name} WHERE condition='{q_safe}'"
+
+# Optional: helper function to integrate with your nl_to_sql pipeline
+def generate_sql_safe(query: str, table_name: Optional[str] = None) -> str:
+    """
+    Wrapper for generate_sql to provide defaults and extra safety.
+    """
+    if table_name is None:
+        table_name = "my_table"
+    return generate_sql(query, table_name)
+    
