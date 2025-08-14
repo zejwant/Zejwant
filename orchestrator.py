@@ -1,6 +1,6 @@
 from nip_query import nl_to_sql
-from sql_validator import validate_sql
 from query_processor import execute_query
+from .sql_validator_helper import validate_sql
 from result_formatter import summarize_dataframe, generate_chart, export_dataframe
 from config import get_settings
 
