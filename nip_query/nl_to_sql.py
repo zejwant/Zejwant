@@ -119,3 +119,15 @@ if __name__ == "__main__":
     except ValueError as e:
         print(f"Error: {e}")
       
+# nip_query/nl_to_sql.py
+
+def generate_sql(query: str) -> str:
+    # local import prevents circular import errors
+    from .query_router import decide_route
+
+    route = decide_route(query)
+    if route == "rule":
+        return "SELECT * FROM my_table"  # example placeholder
+    else:
+        return "SELECT COUNT(*) FROM my_table"
+        
