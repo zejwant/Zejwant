@@ -17,6 +17,9 @@ from typing import Any, Dict, Union
 from .validation import DataValidatorV1
 from cleaning.validation import validate_data
 from .cleaner_core import CleanerCore
+validator = DataValidatorV1()
+report = validator.batch_validate(df, schema_rules)
+
 from .validation import validate_data
 from .deduplication import deduplicate_data
 from .cleaner_controller import CleanerController
