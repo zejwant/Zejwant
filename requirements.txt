@@ -1,4 +1,13 @@
 
+pip>=25.2
+setuptools>=68.0
+wheel>=0.41
+cython
+pandas==2.1.1  # pin to version with wheels for your Python
+
+
+
+
 # Core
 pandas==2.1.1
 numpy==1.26.0
