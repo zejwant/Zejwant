@@ -172,3 +172,12 @@ if __name__ == "__main__":
     chart_buf = generate_chart(df_test, "date", "sales", "line", interactive=False)
     print(f"Static chart generated: {len(chart_buf.getvalue())} bytes")
   
+
+def format_sql(sql: str) -> str:
+    """
+    Optional: Normalize/format SQL string.
+    Example: strip extra spaces, lowercase keywords.
+    """
+    # simple formatting placeholder
+    return " ".join(sql.strip().split())
+    
