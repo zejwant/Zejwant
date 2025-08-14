@@ -14,6 +14,8 @@ import time
 from typing import Any, Dict, Union
 
 # Core cleaning modules
+from .validation import DataValidatorV1
+from cleaning.validation import validate_data
 from .cleaner_core import CleanerCore
 from .validation import validate_data
 from .deduplication import deduplicate_data
