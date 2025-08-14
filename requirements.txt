@@ -10,3 +10,4 @@ spacy
 transformers
 fastapi
 uvicorn[standard]
+sql-validator
