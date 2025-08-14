@@ -10,3 +10,4 @@ spacy
 transformers
 fastapi
 uvicorn[standard]
+pydantic-settings>=1.2.0
