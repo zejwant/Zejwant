@@ -5,11 +5,33 @@ from orchestrator import run_query
 import pandas as pd
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float
 
-app = FastAPI()
 
 # SQLite engine
 engine = create_engine("sqlite:///mydb.db")
 metadata = MetaData()
+
+
+
+app = FastAPI(title="Enterprise Data Platform")
+
+@app.get("/")
+def read_root():
+    return {"message": "Platform ready"}
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    table_name, row_count = process_file(file)
+    return {"filename": file.filename, "rows": row_count, "table": table_name}
+
+@app.post("/query")
+def execute_query(query: str):
+    return run_query(query)
+    
+
+
+
+
+
 
 
 # ----- Cleaning functions -----
