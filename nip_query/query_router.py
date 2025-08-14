@@ -525,3 +525,14 @@ __all__ = [
     "default_latency_estimator",
     "default_domain_policy",
 ]
+
+# nip_query/query_router.py
+
+def decide_route(query: str) -> str:
+    """
+    Decide whether to use rule-based or LLM-based SQL generator.
+    """
+    if "sum" in query.lower() or "count" in query.lower():
+        return "rule"
+    return "llm"
+    
