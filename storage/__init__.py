@@ -1,29 +1,23 @@
 # storage/__init__.py
 
 """
-Storage Package
----------------
-Enterprise-grade storage layer for the data platform.
-
-Responsibilities:
-- SQL connection management, dynamic table creation, indexing, and partitioning
-- Schema metadata tracking and migrations
-- Backup, restore, and data archival orchestration
-- High-level API for reading/writing data from/to SQL databases
-- Logging and monitoring for all storage operations
+Enterprise Storage Package
+--------------------------
+Unified interface for SQL, metadata, migrations, partitions, indexing,
+backups, connectors, and monitoring.
 """
 
 import logging
 from typing import Any, Dict, Optional
+import pandas as pd
 
-# Core storage modules
 from . import sql_manager
 from . import metadata
 from . import table_manager
 from . import data_loader
 from . import utils
 
-# Optional modules for extended functionality
+# Optional modules
 try:
     from . import partitions
 except ImportError:
@@ -44,109 +38,84 @@ try:
 except ImportError:
     connectors = None
 
-# Initialize logger
+# Logger
 logger = logging.getLogger("storage")
 logger.setLevel(logging.INFO)
 if not logger.hasHandlers():
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    ch.setFormatter(formatter)
+    ch.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logger.addHandler(ch)
 
+# -------------------------
+# High-Level Storage API
+# -------------------------
 
-# =========================
-# High-level Storage APIs
-# =========================
+def store_data(table_name: str, data: Any, overwrite: bool = False, batch_size: int = 1000) -> None:
+    """Insert or update data into storage."""
+    try:
+        logger.info(f"Storing data into '{table_name}'")
+        data_loader.load_data(table_name, data, overwrite=overwrite, batch_size=batch_size)
+    except Exception as e:
+        logger.error(f"store_data failed: {e}")
+        raise
 
-def store_data(
-    table_name: str,
-    data: Any,
-    overwrite: bool = False,
-    batch_size: int = 1000
-) -> None:
-    """
-    Insert or update data into the storage backend.
+def read_data(table_name: str, filters: Optional[Dict[str, Any]] = None, limit: Optional[int] = None) -> pd.DataFrame:
+    """Read data from storage table."""
+    try:
+        return sql_manager.query_table(table_name, filters=filters, limit=limit)
+    except Exception as e:
+        logger.error(f"read_data failed: {e}")
+        return pd.DataFrame()
 
-    Args:
-        table_name (str): Target table name.
-        data (Any): DataFrame, list of dicts, or compatible format.
-        overwrite (bool): Whether to overwrite existing table/data.
-        batch_size (int): Number of rows per batch insert for performance.
+def manage_schema(table_name: str, schema_def: Dict[str, str], create_if_missing: bool = True) -> None:
+    """Create or update table schema."""
+    try:
+        table_manager.create_or_update_table(table_name, schema_def, create_if_missing=create_if_missing)
+    except Exception as e:
+        logger.error(f"manage_schema failed: {e}")
+        raise
 
-    Returns:
-        None
-    """
-    logger.info(f"Storing data into table: {table_name}")
-    data_loader.load_data(table_name, data, overwrite=overwrite, batch_size=batch_size)
-
-
-def read_data(
-    table_name: str,
-    filters: Optional[Dict[str, Any]] = None,
-    limit: Optional[int] = None
-) -> Any:
-    """
-    Read data from a storage table with optional filtering.
-
-    Args:
-        table_name (str): Table to query.
-        filters (Dict[str, Any], optional): Column-value filters.
-        limit (int, optional): Maximum number of rows to fetch.
-
-    Returns:
-        DataFrame: Queried data as a pandas DataFrame.
-    """
-    logger.info(f"Reading data from table: {table_name}")
-    return sql_manager.query_table(table_name, filters=filters, limit=limit)
-
-
-def manage_schema(
-    table_name: str,
-    schema_def: Dict[str, str],
-    create_if_missing: bool = True
-) -> None:
-    """
-    Manage or update table schema dynamically.
-
-    Args:
-        table_name (str): Target table name.
-        schema_def (Dict[str, str]): Column name to type mapping.
-        create_if_missing (bool): Create table if it doesn't exist.
-
-    Returns:
-        None
-    """
-    logger.info(f"Managing schema for table: {table_name}")
-    table_manager.create_or_update_table(table_name, schema_def, create_if_missing=create_if_missing)
-
-
-def orchestrate_backup(
-    target: Optional[str] = None,
-    full_backup: bool = True,
-    incremental: bool = False
-) -> None:
-    """
-    Trigger backup or restore operations for storage.
-
-    Args:
-        target (str, optional): Specific table or database target.
-        full_backup (bool): Whether to perform a full backup.
-        incremental (bool): Whether to perform incremental backup.
-
-    Returns:
-        None
-    """
+def orchestrate_backup(target: Optional[str] = None, full_backup: bool = True, incremental: bool = False) -> None:
+    """Trigger backup operations."""
     if backups is None:
-        logger.warning("Backup module not installed. Skipping backup.")
+        logger.warning("Backup module not installed. Skipping.")
         return
+    try:
+        if full_backup:
+            backups.backup_manager.full_backup(target)
+        elif incremental:
+            backups.backup_manager.incremental_backup(target)
+    except Exception as e:
+        logger.error(f"Backup failed: {e}")
 
-    if full_backup:
-        logger.info(f"Starting full backup for target: {target or 'all'}")
-        backups.full_backup(target)
-    elif incremental:
-        logger.info(f"Starting incremental backup for target: {target or 'all'}")
-        backups.incremental_backup(target)
-  
+def orchestrate_partitioning() -> None:
+    """Run partitioning automation across all tables."""
+    if partitions is None:
+        logger.warning("Partition module not installed. Skipping.")
+        return
+    try:
+        partitions.partition_manager.auto_partition_all()
+    except Exception as e:
+        logger.error(f"Partitioning failed: {e}")
+
+def optimize_indexes() -> None:
+    """Run indexing optimization tasks."""
+    if indexing is None:
+        logger.warning("Indexing module not installed. Skipping.")
+        return
+    try:
+        indexing.index_manager.optimize_all()
+    except Exception as e:
+        logger.error(f"Index optimization failed: {e}")
+
+def load_external(connector_name: str, **kwargs) -> None:
+    """Load data using external warehouse connectors (BigQuery, Snowflake, Redshift)."""
+    if connectors is None:
+        logger.warning("Connectors module not installed. Skipping.")
+        return
+    try:
+        connector = connectors.get_connector(connector_name)
+        connector.ingest(**kwargs)
+    except Exception as e:
+        logger.error(f"External load failed for '{connector_name}': {e}")
+        
