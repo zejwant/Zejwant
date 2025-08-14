@@ -1,4 +1,4 @@
-pandas
+
 # Core data libraries
 pandas>=2.1.0
 numpy>=1.26.0
