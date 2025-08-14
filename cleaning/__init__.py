@@ -31,6 +31,20 @@ from .format_cleaners.json_cleaner import clean_json
 from .format_cleaners.xml_cleaner import clean_xml
 from .format_cleaners.pdf_cleaner import clean_pdf
 from .format_cleaners.log_cleaner import clean_log
+from .format_cleaners.parquet_cleaner import clean_parquet
+from .format_cleaners.avro_cleaner import clean_avro
+from .format_cleaners.orc_cleaner import clean_orc
+from .format_cleaners.google_sheets_cleaner import clean_google_sheets
+from .format_cleaners.html_scraper_cleaner import clean_html_scraper
+from .format_cleaners.sensor_iot_cleaner import clean_sensor_iot
+from .format_cleaners.yaml_cleaner import clean_yaml
+from .format_cleaners.kafka_stream_cleaner import clean_kafka_stream
+from .format_cleaners.mqtt_stream_cleaner import clean_mqtt_stream
+from .format_cleaners.image_cleaner import clean_image
+from .format_cleaners.video_metadata_cleaner import clean_video_metadata
+from .format_cleaners.audio_metadata_cleaner import clean_audio_metadata
+
+
 
 # Initialize logging
 logger = logging.getLogger("cleaning")
@@ -68,14 +82,26 @@ def clean_data(data: Any, data_format: str, **kwargs) -> Any:
     data_format = data_format.lower()
 
     format_cleaners = {
-        "csv": clean_csv,
-        "excel": clean_excel,
-        "json": clean_json,
-        "xml": clean_xml,
-        "pdf": clean_pdf,
-        "log": clean_log,
+    "csv": clean_csv,
+    "excel": clean_excel,
+    "json": clean_json,
+    "xml": clean_xml,
+    "pdf": clean_pdf,
+    "log": clean_log,
+    "parquet": clean_parquet,
+    "avro": clean_avro,
+    "orc": clean_orc,
+    "google_sheets": clean_google_sheets,
+    "html": clean_html_scraper,
+    "iot": clean_sensor_iot,
+    "yaml": clean_yaml,
+    "kafka": clean_kafka_stream,
+    "mqtt": clean_mqtt_stream,
+    "image": clean_image,
+    "video": clean_video_metadata,
+    "audio": clean_audio_metadata,
     }
-
+    
     if data_format not in format_cleaners:
         logger.error(f"Unsupported data format: {data_format}")
         raise ValueError(f"Unsupported data format: {data_format}")
@@ -91,4 +117,32 @@ def clean_data(data: Any, data_format: str, **kwargs) -> Any:
     logger.info(f"Data cleaned in {elapsed_time:.3f} seconds")
 
     return cleaned_data
-  
+
+   data_format = ext_map.get(data_format.lower(), data_format.lower())
+
+   ext_map = {
+    ".csv": "csv",
+    ".xlsx": "excel",
+    ".xls": "excel",
+    ".json": "json",
+    ".xml": "xml",
+    ".pdf": "pdf",
+    ".log": "log",
+    ".parquet": "parquet",
+    ".avro": "avro",
+    ".orc": "orc",
+    ".gsheet": "google_sheets",
+    ".html": "html",
+    ".iot": "iot",
+    ".yaml": "yaml",
+    ".yml": "yaml",
+    ".kafka": "kafka",
+    ".mqtt": "mqtt",
+    ".png": "image",
+    ".jpg": "image",
+    ".jpeg": "image",
+    ".mp4": "video",
+    ".mov": "video",
+    ".mp3": "audio",
+    ".wav": "audio",
+   }
