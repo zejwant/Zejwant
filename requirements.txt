@@ -1,14 +1,9 @@
-
+# Core
 pip>=25.2
 setuptools>=68.0
 wheel>=0.41
 cython
-pandas==2.1.1  # pin to version with wheels for your Python
 
-
-
-
-# Core
 pandas==2.1.1
 numpy==1.26.0
 scipy==1.11.0
@@ -69,48 +64,5 @@ chardet==5.2.0
 eml_parser==0.10.4
 
 # Google Sheets / OAuth
-gspread==5.10.0
-oauth2client==4.1.3
-
-
-
-
-
-
-pandas==2.1.1
-numpy==1.26.0
-scipy==1.11.0
-openpyxl==3.1.2
-xlrd==2.0.1
-pyarrow==12.0.1
-fastavro==1.8.3
-pdfplumber==0.10.0
-PyMuPDF==1.22.5
-PyPDF2==3.0.1
-lxml==4.9.3
-xmltodict==0.13.0
-beautifulsoup4==4.12.2
-fastapi==0.111.1
-uvicorn[standard]==0.23.2
-python-multipart==0.0.6
-requests==2.32.0
-sqlalchemy==2.1.3
-psycopg2-binary==2.9.7
-sqlparse==0.4.4
-pydantic==2.6.0
-python-dotenv==1.0.1
-matplotlib==3.8.1
-plotly==5.16.1
-scikit-learn==1.3.2
-shap==0.43.1
-spacy==3.7.1
-transformers==4.33.2
-faiss-cpu==1.7.4
-openai==1.8.4
-tqdm==4.66.1
-tabulate==0.9.0
-loguru==0.7.0
-colorlog==6.7.0
-python-json-logger==2.0.7
 gspread==5.10.0
 oauth2client==4.1.3
