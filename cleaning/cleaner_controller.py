@@ -18,7 +18,8 @@ import pandas as pd
 
 # --- Core / Validation / Dedup modules ---
 from .cleaner_core import CleanerCore
-from .validation import DataValidator
+from .validation import DataValidatorV1  # ✅ matches your class name in validation.py
+
 from .deduplication import Deduplicator
 
 # --- Format-specific cleaners ---
