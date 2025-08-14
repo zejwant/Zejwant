@@ -184,4 +184,12 @@ class DataValidatorV1:
                 )
         logger.info(f"Batch validation report: {full_report}")
         return full_report
-                           
+
+
+
+
+
+def validate_data(df, schema_rules, raise_on_error=False):
+    validator = DataValidatorV1()
+    return validator.batch_validate(df, schema_rules, raise_on_error=raise_on_error)
+    
